@@ -1,6 +1,6 @@
 {
   "name": "mcp-mailtrap",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for the Mailtrap email platform — analytics, sending, contacts, sandbox",
   "type": "module",
   "main": "dist/index.js",
@@ -53,7 +53,7 @@
   "homepage": "https://github.com/pijusz/mcp-mailtrap#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pijusz/mcp-mailtrap"
+    "url": "git+https://github.com/pijusz/mcp-mailtrap.git"
   },
   "engines": {
     "node": ">=18"

@@ -1,4 +1,5 @@
-import { extname } from "node:path";
+import { unlink, writeFile } from "node:fs/promises";
+import { basename, dirname, extname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createElement } from "react";
@@ -16,7 +17,7 @@ async function importComponentModule(filePath: string): Promise<Record<string, u
     return import(pathToFileURL(filePath).href);
   }
 
-  // Node: bundle in memory via esbuild's JS API, import from data URL
+  // Node: bundle next to the source file so bare imports still resolve via local node_modules
   const { build } = await import("esbuild");
   const result = await build({
     entryPoints: [filePath],
@@ -30,8 +31,18 @@ async function importComponentModule(filePath: string): Promise<Record<string, u
   });
 
   const code = result.outputFiles[0].text;
-  const url = `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
-  return import(url);
+  const tempFile = join(
+    dirname(filePath),
+    `.${basename(filePath)}.mcp-mailtrap-${Date.now()}-${process.pid}.mjs`,
+  );
+
+  await writeFile(tempFile, code, "utf8");
+
+  try {
+    return await import(pathToFileURL(tempFile).href);
+  } finally {
+    await unlink(tempFile).catch(() => {});
+  }
 }
 
 export function registerTemplateTools(server: McpServer): void {

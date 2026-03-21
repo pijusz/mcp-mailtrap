@@ -22,6 +22,13 @@ interface RetryOptions {
   timeout?: number;
 }
 
+function shouldUseSendingAuth(path: string, stream?: Stream): boolean {
+  return (
+    (stream === "transactional" || stream === "bulk") &&
+    (path.startsWith("/api/send") || path.startsWith("/api/batch"))
+  );
+}
+
 function resolveBaseUrl(path: string, stream?: Stream): string {
   if (stream) {
     return BASE_URLS[stream];
@@ -118,8 +125,9 @@ export async function request<T>(
   const baseUrl = resolveBaseUrl(path, options.stream);
   const qs = buildQueryString(options.query);
   const url = `${baseUrl}${path}${qs}`;
-  // Use sending token for send/batch endpoints, general token for everything else
-  const headers = options.stream ? getSendingAuthHeaders() : getAuthHeaders();
+  const headers = shouldUseSendingAuth(path, options.stream)
+    ? getSendingAuthHeaders()
+    : getAuthHeaders();
 
   const init: RequestInit = {
     method,
@@ -165,7 +173,9 @@ export async function requestText(
   const baseUrl = resolveBaseUrl(path, options.stream);
   const qs = buildQueryString(options.query);
   const url = `${baseUrl}${path}${qs}`;
-  const headers = options.stream ? getSendingAuthHeaders() : getAuthHeaders();
+  const headers = shouldUseSendingAuth(path, options.stream)
+    ? getSendingAuthHeaders()
+    : getAuthHeaders();
 
   const init: RequestInit = { method, headers };
   if (options.body !== undefined) {

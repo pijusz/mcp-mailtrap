@@ -13,6 +13,7 @@ globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 // Set required env before importing
 process.env.MAILTRAP_API_TOKEN = "test-token-123";
+process.env.MAILTRAP_SENDING_TOKEN = "sending-token-456";
 
 const { request, requestText, fetchWithRetry } = await import(
   "../src/services/mailtrap-api.ts"
@@ -131,7 +132,7 @@ describe("mailtrap-api", () => {
       expect(calledUrl).toStartWith("https://mailtrap.io");
     });
 
-    it("includes auth header", async () => {
+    it("uses the general auth header for general API requests", async () => {
       mockFetch.mockImplementationOnce(() =>
         Promise.resolve(
           new Response(JSON.stringify({}), {
@@ -142,6 +143,46 @@ describe("mailtrap-api", () => {
       );
 
       await request("GET", "/api/test");
+
+      const calledInit = mockFetch.mock.calls[0][1] as RequestInit;
+      const headers = calledInit.headers as Record<string, string>;
+      expect(headers["Api-Token"]).toBe("test-token-123");
+    });
+
+    it("uses the sending token for transactional send requests", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        ),
+      );
+
+      await request("POST", "/api/send", {
+        stream: "transactional",
+        body: {},
+      });
+
+      const calledInit = mockFetch.mock.calls[0][1] as RequestInit;
+      const headers = calledInit.headers as Record<string, string>;
+      expect(headers["Api-Token"]).toBe("sending-token-456");
+    });
+
+    it("keeps using the general token for sandbox requests", async () => {
+      mockFetch.mockImplementationOnce(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        ),
+      );
+
+      await request("POST", "/api/send/123", {
+        stream: "sandbox",
+        body: {},
+      });
 
       const calledInit = mockFetch.mock.calls[0][1] as RequestInit;
       const headers = calledInit.headers as Record<string, string>;

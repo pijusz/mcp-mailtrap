@@ -200,13 +200,16 @@ export function registerEmailLogTools(server: McpServer): void {
         request<ContactList[]>("GET", `/api/accounts/${accountId}/contacts/lists`),
       ]);
 
-      const targetListIds = args.list_id
-        ? new Set([args.list_id])
+      const requestedList = args.list_id
+        ? contactLists.find((list) => list.id === args.list_id)
+        : undefined;
+      const targetListIds = requestedList
+        ? new Set([requestedList.id])
         : new Set(contactLists.map((l) => l.id));
 
       const listNameMap = new Map(contactLists.map((l) => [l.id, l.name]));
 
-      if (targetListIds.size === 0) {
+      if ((args.list_id && !requestedList) || targetListIds.size === 0) {
         return {
           content: [
             {

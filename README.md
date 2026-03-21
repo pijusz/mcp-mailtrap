@@ -2,6 +2,8 @@
   <img src="logo.svg" alt="mcpj-mailtrap" width="280" />
 </p>
 
+<h1 align="center">mcpj-mailtrap</h1>
+
 <p align="center">
   Mailtrap MCP server — analytics, email logs, contacts, sandbox testing & more via natural language.
   <br/>
@@ -18,8 +20,22 @@ Get an API token from [Mailtrap API Tokens](https://mailtrap.io/api-tokens).
 
 ### 2. Add to Claude Code
 
+**Minimal**
+
 ```bash
 claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- npx mcpj-mailtrap
+```
+
+**Full**
+
+```bash
+claude mcp add mailtrap \
+  -e MAILTRAP_API_TOKEN=your_token \
+  -e MAILTRAP_SENDING_TOKEN=your_sending_token \
+  -e MAILTRAP_ACCOUNT_ID=12345 \
+  -e MAILTRAP_DEFAULT_FROM_EMAIL=noreply@yourdomain.com \
+  -e MAILTRAP_TEST_INBOX_ID=12345 \
+  -- npx mcpj-mailtrap
 ```
 
 That's it. Restart Claude Code and the tools are available.
@@ -29,7 +45,7 @@ That's it. Restart Claude Code and the tools are available.
 
 ### Claude Desktop / Cursor
 
-Add to your MCP settings JSON:
+**Minimal**
 
 ```json
 {
@@ -39,6 +55,26 @@ Add to your MCP settings JSON:
       "args": ["-y", "mcpj-mailtrap@latest"],
       "env": {
         "MAILTRAP_API_TOKEN": "your_token"
+      }
+    }
+  }
+}
+```
+
+**Full**
+
+```json
+{
+  "mcpServers": {
+    "mailtrap": {
+      "command": "npx",
+      "args": ["-y", "mcpj-mailtrap@latest"],
+      "env": {
+        "MAILTRAP_API_TOKEN": "your_token",
+        "MAILTRAP_SENDING_TOKEN": "your_sending_token",
+        "MAILTRAP_ACCOUNT_ID": "12345",
+        "MAILTRAP_DEFAULT_FROM_EMAIL": "noreply@yourdomain.com",
+        "MAILTRAP_TEST_INBOX_ID": "12345"
       }
     }
   }

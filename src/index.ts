@@ -4,7 +4,6 @@ import { createServer } from "./server.ts";
 import { log } from "./utils/logger.ts";
 import { NAME, VERSION } from "./version.ts";
 
-// CLI flags
 const args = process.argv.slice(2);
 
 if (args.includes("--version") || args.includes("-v")) {
@@ -12,7 +11,6 @@ if (args.includes("--version") || args.includes("-v")) {
   process.exit(0);
 }
 
-// Preflight: validate token is set (account ID is resolved lazily)
 try {
   getEnv();
 } catch (err) {
@@ -20,14 +18,12 @@ try {
   process.exit(1);
 }
 
-// Start server
 const server = createServer();
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
 log.info(`${NAME} v${VERSION} running on stdio`);
 
-// Non-blocking update check
 checkForUpdates().catch(() => {});
 
 async function checkForUpdates(): Promise<void> {
@@ -47,7 +43,6 @@ async function checkForUpdates(): Promise<void> {
       log.info(`Update available: v${latest} (current: v${VERSION})`);
     }
   } catch {
-    // Silently ignore — update check is best-effort
   } finally {
     clearTimeout(timer);
   }

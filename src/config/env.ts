@@ -4,7 +4,10 @@ import { log } from "../utils/logger.ts";
 
 const envSchema = z.object({
   MAILTRAP_API_TOKEN: z.string().min(1, "MAILTRAP_API_TOKEN is required"),
+  MAILTRAP_SENDING_TOKEN: z.string().optional(),
   MAILTRAP_ACCOUNT_ID: z.string().optional(),
+  MAILTRAP_TEST_INBOX_ID: z.string().optional(),
+  MAILTRAP_DEFAULT_FROM_EMAIL: z.string().optional(),
   DEBUG: z.string().optional(),
 });
 
@@ -15,7 +18,6 @@ let _env: Env | null = null;
 export function getEnv(): Env {
   if (_env) return _env;
 
-  // Load .env file if present
   try {
     const text = readFileSync(".env", "utf-8");
     for (const line of text.split("\n")) {
@@ -29,9 +31,7 @@ export function getEnv(): Env {
         process.env[key] = value;
       }
     }
-  } catch {
-    // No .env file — that's fine
-  }
+  } catch {}
 
   const result = envSchema.safeParse(process.env);
 

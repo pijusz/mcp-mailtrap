@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { formatTable } from "../services/format.ts";
-import { request } from "../services/mailtrap-api.ts";
+import { request, requestText } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
 
 function redactPassword(obj: Record<string, unknown>): Record<string, unknown> {
@@ -12,7 +12,6 @@ function redactPassword(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 export function registerSandboxTools(server: McpServer): void {
-  // ── list_projects ───────────────────────────────────────────────────
   server.tool("list_projects", "List all sandbox projects.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
@@ -27,7 +26,6 @@ export function registerSandboxTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  // ── get_project ─────────────────────────────────────────────────────
   server.tool(
     "get_project",
     "Get details of a single sandbox project.",
@@ -45,7 +43,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── manage_project ──────────────────────────────────────────────────
   server.tool(
     "manage_project",
     "Create, update, or delete a sandbox project.",
@@ -85,7 +82,6 @@ export function registerSandboxTools(server: McpServer): void {
         return { content: [{ type: "text" as const, text }] };
       }
 
-      // delete
       await request<undefined>(
         "DELETE",
         `/api/accounts/${accountId}/projects/${args.project_id}`,
@@ -95,7 +91,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── list_inboxes ────────────────────────────────────────────────────
   server.tool("list_inboxes", "List all sandbox inboxes.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
@@ -115,7 +110,6 @@ export function registerSandboxTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  // ── get_inbox ───────────────────────────────────────────────────────
   server.tool(
     "get_inbox",
     "Get details of a single sandbox inbox.",
@@ -139,7 +133,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── manage_inbox ────────────────────────────────────────────────────
   server.tool(
     "manage_inbox",
     "Create, update, clean, mark all read, reset credentials, or delete a sandbox inbox.",
@@ -223,7 +216,6 @@ export function registerSandboxTools(server: McpServer): void {
         return { content: [{ type: "text" as const, text }] };
       }
 
-      // delete
       await request<undefined>(
         "DELETE",
         `/api/accounts/${accountId}/inboxes/${args.inbox_id}`,
@@ -233,7 +225,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── get_messages ────────────────────────────────────────────────────
   server.tool(
     "get_messages",
     "List messages in a sandbox inbox.",
@@ -273,7 +264,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── get_message ─────────────────────────────────────────────────────
   server.tool(
     "get_message",
     "Get a single sandbox message with body content and optional attachments.",
@@ -294,7 +284,7 @@ export function registerSandboxTools(server: McpServer): void {
 
       const [metadata, body] = await Promise.all([
         request<Record<string, unknown>>("GET", basePath),
-        request<string>("GET", `${basePath}/body.${args.format}`),
+        requestText("GET", `${basePath}/body.${args.format}`),
       ]);
 
       const parts: string[] = [];
@@ -331,7 +321,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── analyze_message ─────────────────────────────────────────────────
   server.tool(
     "analyze_message",
     "Analyze a sandbox message: spam report, HTML analysis, and mail headers.",
@@ -367,7 +356,6 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  // ── forward_message ─────────────────────────────────────────────────
   server.tool(
     "forward_message",
     "Forward a sandbox message to an email address.",

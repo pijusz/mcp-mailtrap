@@ -79,7 +79,7 @@ export function registerEmailLogTools(server: McpServer): void {
       if (args.sent_after) query["filter[sent_after]"] = args.sent_after;
       if (args.sent_before) query["filter[sent_before]"] = args.sent_before;
       if (args.search) query["filter[search]"] = args.search;
-      if (args.cursor) query["search_after"] = args.cursor;
+      if (args.cursor) query.search_after = args.cursor;
 
       const response = await request<EmailLogsResponse>(
         "GET",
@@ -185,7 +185,7 @@ export function registerEmailLogTools(server: McpServer): void {
 
   server.tool(
     "check_list_hygiene",
-    "Smart cross-reference: compares suppressions against contact lists to find suppressed emails still in active lists. Generates a report with suggested remediation actions.",
+    "Cross-references suppressions against contacts to find suppressed emails still in your contact lists. Looks up each suppressed email as a contact and checks list membership. Returns overlaps with specific remediation actions.",
     {
       list_id: z
         .number()
@@ -200,60 +200,127 @@ export function registerEmailLogTools(server: McpServer): void {
         request<ContactList[]>("GET", `/api/accounts/${accountId}/contacts/lists`),
       ]);
 
-      const lists = args.list_id
-        ? contactLists.filter((l) => l.id === args.list_id)
-        : contactLists;
+      const targetListIds = args.list_id
+        ? new Set([args.list_id])
+        : new Set(contactLists.map((l) => l.id));
 
-      if (lists.length === 0) {
-        const text = args.list_id
-          ? `No contact list found with ID ${args.list_id}.`
-          : "No contact lists found.";
-        return { content: [{ type: "text" as const, text }] };
+      const listNameMap = new Map(contactLists.map((l) => [l.id, l.name]));
+
+      if (targetListIds.size === 0) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: args.list_id
+                ? `No contact list found with ID ${args.list_id}.`
+                : "No contact lists found.",
+            },
+          ],
+        };
       }
 
       if (suppressions.length === 0) {
-        const text = "No suppressions found. All contact lists are clean.";
-        return { content: [{ type: "text" as const, text }] };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "No suppressions found. All contact lists are clean.",
+            },
+          ],
+        };
+      }
+
+      // Look up each suppressed email as a contact to find list membership
+      interface ContactResult {
+        email: string;
+        list_ids: number[];
+      }
+
+      const overlaps: Array<{
+        email: string;
+        reason: string;
+        created_at: string;
+        lists: Array<{ id: number; name: string }>;
+      }> = [];
+
+      // Batch lookups (max 10 concurrent to respect rate limits)
+      const batchSize = 10;
+      for (let i = 0; i < suppressions.length; i += batchSize) {
+        const batch = suppressions.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map((s) =>
+            request<{ data: ContactResult }>(
+              "GET",
+              `/api/accounts/${accountId}/contacts/${encodeURIComponent(s.email)}`,
+            ),
+          ),
+        );
+
+        for (let j = 0; j < results.length; j++) {
+          const result = results[j];
+          const suppression = batch[j];
+          if (result.status === "fulfilled" && result.value?.data?.list_ids) {
+            const matchingLists = result.value.data.list_ids
+              .filter((id) => targetListIds.has(id))
+              .map((id) => ({
+                id,
+                name: listNameMap.get(id) ?? `List ${id}`,
+              }));
+
+            if (matchingLists.length > 0) {
+              overlaps.push({
+                email: suppression.email,
+                reason: suppression.reason,
+                created_at: suppression.created_at,
+                lists: matchingLists,
+              });
+            }
+          }
+        }
       }
 
       const lines: string[] = [];
       lines.push("List Hygiene Report");
-      lines.push("=".repeat(50));
+      lines.push("═".repeat(50));
+      lines.push("");
+      lines.push(`Suppressions checked: ${suppressions.length}`);
+      lines.push(`Overlaps found: ${overlaps.length}`);
       lines.push("");
 
-      // Contact lists summary
-      lines.push("Contact Lists:");
-      for (const list of lists) {
-        lines.push(`  - ${list.name} (ID: ${list.id}, ${list.contacts_count} contacts)`);
+      if (overlaps.length === 0) {
+        lines.push("No suppressed emails found in your contact lists. Lists are clean.");
+      } else {
+        lines.push("Suppressed emails still in contact lists:");
+        lines.push("─".repeat(50));
+        for (const overlap of overlaps) {
+          lines.push(
+            `  ${overlap.email} (${overlap.reason}, suppressed ${overlap.created_at})`,
+          );
+          for (const list of overlap.lists) {
+            lines.push(`    → in list "${list.name}" (ID: ${list.id})`);
+          }
+          lines.push("");
+        }
+
+        lines.push("Suggested Actions:");
+        for (const overlap of overlaps) {
+          if (overlap.reason === "complaint" || overlap.reason === "unsubscribe") {
+            lines.push(
+              `  • update_contact(identifier: "${overlap.email}", list_ids_excluded: [${overlap.lists.map((l) => l.id).join(", ")}])`,
+            );
+            lines.push(
+              `    Reason: ${overlap.reason} — remove from lists, keep suppression`,
+            );
+          } else {
+            lines.push(
+              `  • update_contact(identifier: "${overlap.email}", list_ids_excluded: [${overlap.lists.map((l) => l.id).join(", ")}])`,
+            );
+            lines.push(
+              `    Reason: ${overlap.reason} — remove from lists. If email is valid, also delete_suppression.`,
+            );
+          }
+        }
       }
-      lines.push("");
-
-      // Suppressions summary
-      lines.push(`Active Suppressions: ${suppressions.length}`);
-      lines.push("");
-
-      const suppressionRows = suppressions.map((s) => ({
-        email: s.email,
-        reason: s.reason,
-        created_at: s.created_at,
-        sending_stream: s.sending_stream,
-      }));
-
-      lines.push(formatTable(suppressionRows, "Suppressed Emails"));
-      lines.push("");
-
-      // Suggested actions
-      lines.push("Suggested Actions:");
-      lines.push("  1. Review suppressed emails and remove them from contact lists");
-      lines.push(
-        "  2. Use delete_suppression to re-enable sending if the suppression was in error",
-      );
-      lines.push(
-        "  3. For bounced addresses, verify the email is valid before removing the suppression",
-      );
-      lines.push(
-        "  4. For spam complaints, do NOT remove the suppression — remove the contact from your lists instead",
-      );
 
       const text = lines.join("\n");
       return { content: [{ type: "text" as const, text }] };

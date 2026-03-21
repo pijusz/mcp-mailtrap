@@ -20,7 +20,6 @@ export async function resolveAccountId(): Promise<string> {
     return _accountId;
   }
 
-  // Auto-discover
   const accounts = await request<Account[]>("GET", "/api/accounts");
 
   if (accounts.length === 0) {

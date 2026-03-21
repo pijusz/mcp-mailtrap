@@ -1,9 +1,38 @@
+import { extname } from "node:path";
+import { pathToFileURL } from "node:url";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createElement } from "react";
 import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+
+/** Import a component module, transpiling .tsx/.jsx via esbuild on Node. */
+async function importComponentModule(filePath: string): Promise<Record<string, unknown>> {
+  const ext = extname(filePath).toLowerCase();
+
+  // Bun handles .tsx/.jsx natively; .js/.mjs work everywhere
+  if (typeof globalThis.Bun !== "undefined" || ext === ".js" || ext === ".mjs") {
+    return import(pathToFileURL(filePath).href);
+  }
+
+  // Node: bundle in memory via esbuild's JS API, import from data URL
+  const { build } = await import("esbuild");
+  const result = await build({
+    entryPoints: [filePath],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    write: false,
+    sourcemap: "inline",
+    external: ["react", "react-dom", "@react-email/*"],
+    loader: { ".ts": "ts", ".tsx": "tsx", ".jsx": "jsx" },
+  });
+
+  const code = result.outputFiles[0].text;
+  const url = `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`;
+  return import(url);
+}
 
 export function registerTemplateTools(server: McpServer): void {
   server.tool("list_templates", "List all email templates.", {}, async () => {
@@ -119,30 +148,38 @@ export function registerTemplateTools(server: McpServer): void {
 
   server.tool(
     "render_react_email",
-    "Render a react-email .tsx component file to HTML and plain text. Does NOT call any Mailtrap API — purely local rendering.",
+    "Render a react-email component file (.tsx/.jsx/.js/.mjs) to HTML and plain text. Purely local — does NOT call any Mailtrap API. The file must default-export a React component using @react-email/components.",
     {
       file_path: z
         .string()
-        .describe("Absolute path to a .tsx file exporting a default React component"),
+        .describe(
+          "Absolute path to a component file exporting a default React component",
+        ),
     },
     async (args) => {
       try {
-        const mod = await import(args.file_path);
-        const Component = mod.default;
+        const mod = await importComponentModule(args.file_path);
+        const Component = mod.default as React.FunctionComponent;
         if (!Component) {
-          throw new Error(
-            "The file does not export a default React component. Make sure your .tsx file has a default export.",
-          );
+          throw new Error("File does not have a default export.");
         }
         const { render } = await import("@react-email/render");
-        const html = await render(createElement(Component), { pretty: true });
-        const plainText = await render(createElement(Component), { plainText: true });
+        const element = createElement(Component);
+        const html = await render(element, { pretty: true });
+        const plainText = await render(element, { plainText: true });
         const text = JSON.stringify({ html, text: plainText }, null, 2);
         return { content: [{ type: "text" as const, text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        const text = `Error rendering react-email component: ${message}\n\nMake sure the file exports a default React component and that @react-email/render is installed.`;
-        return { content: [{ type: "text" as const, text }] };
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error rendering component: ${message}`,
+            },
+          ],
+          isError: true,
+        };
       }
     },
   );

@@ -51,16 +51,16 @@ export function registerStatsTools(server: McpServer): void {
       };
 
       if (args.sending_domain_ids) {
-        query["sending_domain_ids"] = args.sending_domain_ids.map(String);
+        query.sending_domain_ids = args.sending_domain_ids.map(String);
       }
       if (args.sending_streams) {
-        query["sending_streams"] = args.sending_streams;
+        query.sending_streams = args.sending_streams;
       }
       if (args.categories) {
-        query["categories"] = args.categories;
+        query.categories = args.categories;
       }
       if (args.email_service_providers) {
-        query["email_service_providers"] = args.email_service_providers;
+        query.email_service_providers = args.email_service_providers;
       }
 
       if (args.group_by) {

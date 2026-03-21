@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "../auth/index.ts";
+import { getAuthHeaders, getSendingAuthHeaders } from "../auth/index.ts";
 import { log } from "../utils/logger.ts";
 
 const BASE_URLS = {
@@ -73,7 +73,6 @@ export async function fetchWithRetry(
         return response;
       }
 
-      // Retry on 429 and 5xx
       if ((response.status === 429 || response.status >= 500) && attempt < retries) {
         const wait = delay * 2 ** attempt;
         log.warn(
@@ -83,7 +82,6 @@ export async function fetchWithRetry(
         continue;
       }
 
-      // Non-retryable error
       const body = await response.text();
       let message: string;
       try {
@@ -120,7 +118,8 @@ export async function request<T>(
   const baseUrl = resolveBaseUrl(path, options.stream);
   const qs = buildQueryString(options.query);
   const url = `${baseUrl}${path}${qs}`;
-  const headers = getAuthHeaders();
+  // Use sending token for send/batch endpoints, general token for everything else
+  const headers = options.stream ? getSendingAuthHeaders() : getAuthHeaders();
 
   const init: RequestInit = {
     method,
@@ -135,7 +134,6 @@ export async function request<T>(
 
   const response = await fetchWithRetry(url, init);
 
-  // 204 No Content
   if (response.status === 204) {
     return undefined as T;
   }
@@ -143,5 +141,38 @@ export async function request<T>(
   const text = await response.text();
   if (!text) return undefined as T;
 
-  return JSON.parse(text) as T;
+  // Parse based on content-type — sandbox body endpoints return text/html, text/plain, etc.
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return JSON.parse(text) as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as T;
+  }
+}
+
+/**
+ * Request that always returns the response as a raw string (for body.html, body.txt, etc.)
+ */
+export async function requestText(
+  method: string,
+  path: string,
+  options: RequestOptions = {},
+): Promise<string> {
+  const baseUrl = resolveBaseUrl(path, options.stream);
+  const qs = buildQueryString(options.query);
+  const url = `${baseUrl}${path}${qs}`;
+  const headers = options.stream ? getSendingAuthHeaders() : getAuthHeaders();
+
+  const init: RequestInit = { method, headers };
+  if (options.body !== undefined) {
+    init.body = JSON.stringify(options.body);
+  }
+
+  log.debug(`${method} ${url} (text)`);
+  const response = await fetchWithRetry(url, init);
+  return response.text();
 }

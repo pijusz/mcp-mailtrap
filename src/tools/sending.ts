@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { getEnv } from "../config/env.ts";
 import { request } from "../services/mailtrap-api.ts";
-import { resolveAccountId } from "../utils/account-id.ts";
 
 const recipientSchema = z.object({
   email: z.string().describe("Email address"),
@@ -12,14 +12,27 @@ const streamSchema = z
   .enum(["transactional", "bulk"])
   .describe("Sending stream (transactional or bulk)");
 
+const attachmentSchema = z.object({
+  content: z.string().describe("Base64-encoded file content"),
+  filename: z.string().describe("Filename with extension"),
+  type: z.string().optional().describe("MIME type (e.g. application/pdf)"),
+  disposition: z
+    .enum(["attachment", "inline"])
+    .optional()
+    .describe("Attachment disposition (default: attachment)"),
+  content_id: z.string().optional().describe("Content ID for inline attachments"),
+});
+
 export function registerSendingTools(server: McpServer): void {
-  // ── send_email ──────────────────────────────────────────────────────
   server.tool(
     "send_email",
     "Send a single email via a transactional or bulk stream. Provide html/text body or a template_uuid.",
     {
       stream: streamSchema,
-      from_email: z.string().describe("Sender email address"),
+      from_email: z
+        .string()
+        .optional()
+        .describe("Sender email (falls back to MAILTRAP_DEFAULT_FROM_EMAIL env var)"),
       from_name: z.string().optional().describe("Sender display name"),
       to: z.array(recipientSchema).describe("To recipients"),
       cc: z.array(recipientSchema).optional().describe("CC recipients"),
@@ -44,10 +57,27 @@ export function registerSendingTools(server: McpServer): void {
         .optional()
         .describe("Custom variables attached to the message"),
       headers: z.record(z.string()).optional().describe("Custom email headers"),
+      attachments: z
+        .array(attachmentSchema)
+        .optional()
+        .describe("File attachments (base64-encoded)"),
     },
     async (args) => {
+      const fromEmail = args.from_email ?? getEnv().MAILTRAP_DEFAULT_FROM_EMAIL;
+      if (!fromEmail) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: from_email is required. Set it per-call or via MAILTRAP_DEFAULT_FROM_EMAIL env var.",
+            },
+          ],
+          isError: true,
+        };
+      }
+
       const body: Record<string, unknown> = {
-        from: { email: args.from_email, ...(args.from_name && { name: args.from_name }) },
+        from: { email: fromEmail, ...(args.from_name && { name: args.from_name }) },
         to: args.to,
       };
 
@@ -61,6 +91,7 @@ export function registerSendingTools(server: McpServer): void {
       if (args.category) body.category = args.category;
       if (args.custom_variables) body.custom_variables = args.custom_variables;
       if (args.headers) body.headers = args.headers;
+      if (args.attachments) body.attachments = args.attachments;
 
       const data = await request<{ success: boolean; message_ids: string[] }>(
         "POST",
@@ -77,7 +108,6 @@ export function registerSendingTools(server: McpServer): void {
     },
   );
 
-  // ── batch_send ──────────────────────────────────────────────────────
   server.tool(
     "batch_send",
     "Send up to 500 emails in a single batch request via a transactional or bulk stream.",
@@ -194,13 +224,18 @@ export function registerSendingTools(server: McpServer): void {
     },
   );
 
-  // ── send_test_email ─────────────────────────────────────────────────
   server.tool(
     "send_test_email",
     "Send a test email to a sandbox inbox for development/testing.",
     {
-      inbox_id: z.number().describe("Sandbox inbox ID"),
-      from_email: z.string().describe("Sender email address"),
+      inbox_id: z
+        .number()
+        .optional()
+        .describe("Sandbox inbox ID (falls back to MAILTRAP_TEST_INBOX_ID env var)"),
+      from_email: z
+        .string()
+        .optional()
+        .describe("Sender email (falls back to MAILTRAP_DEFAULT_FROM_EMAIL env var)"),
       from_name: z.string().optional().describe("Sender display name"),
       to: z.array(recipientSchema).describe("To recipients"),
       subject: z.string().optional().describe("Email subject"),
@@ -216,8 +251,37 @@ export function registerSendingTools(server: McpServer): void {
         .describe("Variables to inject into the template"),
     },
     async (args) => {
+      const env = getEnv();
+      const inboxId =
+        args.inbox_id ??
+        (env.MAILTRAP_TEST_INBOX_ID ? Number(env.MAILTRAP_TEST_INBOX_ID) : undefined);
+      if (!inboxId) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: inbox_id is required. Set it per-call or via MAILTRAP_TEST_INBOX_ID env var.",
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const fromEmail = args.from_email ?? env.MAILTRAP_DEFAULT_FROM_EMAIL;
+      if (!fromEmail) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: "Error: from_email is required. Set it per-call or via MAILTRAP_DEFAULT_FROM_EMAIL env var.",
+            },
+          ],
+          isError: true,
+        };
+      }
+
       const body: Record<string, unknown> = {
-        from: { email: args.from_email, ...(args.from_name && { name: args.from_name }) },
+        from: { email: fromEmail, ...(args.from_name && { name: args.from_name }) },
         to: args.to,
       };
 
@@ -229,7 +293,7 @@ export function registerSendingTools(server: McpServer): void {
 
       const data = await request<{ success: boolean; message_ids: string[] }>(
         "POST",
-        `/api/send/${args.inbox_id}`,
+        `/api/send/${inboxId}`,
         { body, stream: "sandbox" },
       );
 

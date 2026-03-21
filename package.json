@@ -1,0 +1,58 @@
+{
+  "name": "mcp-mailtrap",
+  "version": "0.1.0",
+  "description": "MCP server for the Mailtrap email platform — analytics, sending, contacts, sandbox",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-mailtrap": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "logo.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "bun src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile=mcp-mailtrap",
+    "build:npm": "bun build src/index.ts --target=node --outfile=dist/index.js && node -e \"const f=require('fs');const c=f.readFileSync('dist/index.js','utf8');f.writeFileSync('dist/index.js','#!/usr/bin/env node\\n'+c)\" && chmod +x dist/index.js",
+    "prepublishOnly": "bun run build:npm",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome check .",
+    "check": "biome check --write .",
+    "inspect": "bunx @modelcontextprotocol/inspector bun src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@react-email/render": "^1.1.2",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.4",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.14",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "mcp",
+    "mailtrap",
+    "email",
+    "analytics",
+    "model-context-protocol",
+    "claude",
+    "ai"
+  ],
+  "author": "pijusz",
+  "homepage": "https://github.com/pijusz/mcp-mailtrap#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pijusz/mcp-mailtrap"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

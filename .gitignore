@@ -1,0 +1,9 @@
+node_modules/
+dist/
+mcp-mailtrap
+mcp-mailtrap-*
+*.tgz
+.env
+.env.*
+!.env.example
+.DS_Store

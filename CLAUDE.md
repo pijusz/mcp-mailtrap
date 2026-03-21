@@ -23,7 +23,7 @@ MCP server for the Mailtrap email platform. Analytics-first with full CRUD.
 - Tool files export `registerXTools(server: McpServer)` functions
 - Zod for parameter validation
 - formatTable for analytics output (Metric | Count | Rate %)
-- react-email renders .tsx components to HTML (not arbitrary strings)
+- react-email renders component files (.tsx/.jsx/.js/.mjs) to HTML (not arbitrary strings)
 - SMTP credentials redacted in sandbox inbox responses
 - Multi-action tools use `action` param to consolidate CRUD operations
 

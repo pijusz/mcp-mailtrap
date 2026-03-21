@@ -4,7 +4,7 @@ Workflow-oriented guide for AI agents using this MCP server.
 
 ## Authentication
 
-Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_ACCOUNT_ID` — if not set, it's auto-discovered on first tool call.
+Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_SENDING_TOKEN` for transactional/bulk send.api requests and `MAILTRAP_ACCOUNT_ID` for a default account — otherwise the account is auto-discovered on first tool call.
 
 ## Workflows
 
@@ -25,14 +25,14 @@ Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_ACCOUNT_ID` — if no
 ### Managing Contact Lists
 
 1. Use `list_contact_lists` to see available lists
-2. Use `check_list_hygiene` to find suppressed contacts still in lists
+2. Use `check_list_hygiene` to find suppressed emails that still belong to contact lists
 3. Follow suggested actions to clean up lists
 4. Use `import_contacts` for bulk additions, `export_contacts` for bulk exports
 5. Use `manage_contact_field` to manage custom fields for segmentation
 
 ### Testing Emails
 
-1. Use `send_test_email` to send to a sandbox inbox
+1. Use `send_test_email` to send to a sandbox inbox (optionally using `MAILTRAP_TEST_INBOX_ID` / `MAILTRAP_DEFAULT_FROM_EMAIL` defaults)
 2. Use `get_messages` to see the email in the inbox
 3. Use `analyze_message` for combined spam score + HTML compatibility + headers report
 4. Use `get_message(format: "htmlsource")` to inspect raw HTML
@@ -42,7 +42,7 @@ Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_ACCOUNT_ID` — if no
 
 1. Use `list_templates` to see existing templates
 2. Use `create_template` with `body_html` for raw HTML templates
-3. For react-email templates: write a `.tsx` file, use `render_react_email` to produce HTML, then `create_template`
+3. For react-email templates: write a component file (`.tsx`, `.jsx`, `.js`, or `.mjs`), use `render_react_email` to produce HTML, then `create_template`
 4. Use `send_email` with `template_uuid` to send using the template
 5. Track template performance via `get_stats(group_by: "category")`
 
@@ -70,16 +70,16 @@ Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_ACCOUNT_ID` — if no
 - `get_email_log` — Single message detail with events timeline.
 - `get_suppressions` — List bounced/spam/unsubscribed emails.
 - `delete_suppression` — Re-enable sending to a suppressed address.
-- `check_list_hygiene` — Cross-reference suppressions with contact lists.
+- `check_list_hygiene` — Look up suppressed emails as contacts and report which lists they still belong to.
 
 ### Sending (3 tools)
 - `send_email` — Send via transactional or bulk stream. Supports HTML, text, or template_uuid.
 - `batch_send` — Send up to 500 emails in one request.
-- `send_test_email` — Send to a sandbox inbox for testing.
+- `send_test_email` — Send to a sandbox inbox for testing, with optional inbox/sender env defaults.
 
 ### Templates (6 tools)
 - `list_templates`, `get_template`, `create_template`, `update_template`, `delete_template` — Standard CRUD.
-- `render_react_email` — Render a `.tsx` react-email component to HTML + plain text. Use output with create_template.
+- `render_react_email` — Render a react-email component file (`.tsx`, `.jsx`, `.js`, `.mjs`) to HTML + plain text. Use output with create_template.
 
 ### Contacts (14 tools)
 - `create_contact`, `get_contact`, `update_contact`, `delete_contact` — Contact CRUD.

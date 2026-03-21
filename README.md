@@ -89,14 +89,14 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcp-
 | `get_email_log` | Single message detail with delivery events timeline |
 | `get_suppressions` | List suppressed emails (bounces, spam complaints, unsubscribes) |
 | `delete_suppression` | Re-enable sending to a suppressed address |
-| `check_list_hygiene` | Cross-reference suppressions with contact lists, suggests cleanup actions |
+| `check_list_hygiene` | Find suppressed emails that still exist in contact lists and suggest exact cleanup actions |
 
 ### Sending
 | Tool | Description |
 |------|-------------|
 | `send_email` | Send via transactional or bulk stream. Supports HTML, text, or templates |
 | `batch_send` | Send up to 500 emails in one request |
-| `send_test_email` | Send to a sandbox inbox for testing |
+| `send_test_email` | Send to a sandbox inbox for testing, with optional env defaults for inbox and sender |
 
 ### Templates
 | Tool | Description |
@@ -106,7 +106,7 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcp-
 | `create_template` | Create a new template |
 | `update_template` | Update an existing template |
 | `delete_template` | Delete a template |
-| `render_react_email` | Render a react-email `.tsx` component to HTML + plain text |
+| `render_react_email` | Render a react-email component file (`.tsx`, `.jsx`, `.js`, `.mjs`) to HTML + plain text |
 
 ### Contacts
 | Tool | Description |
@@ -159,7 +159,8 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcp-
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MAILTRAP_API_TOKEN` | Yes | — | API token from [mailtrap.io/api-tokens](https://mailtrap.io/api-tokens) |
+| `MAILTRAP_API_TOKEN` | Yes | — | General API token from [mailtrap.io/api-tokens](https://mailtrap.io/api-tokens) |
+| `MAILTRAP_SENDING_TOKEN` | No | `MAILTRAP_API_TOKEN` | Separate token for transactional and bulk `send.api` requests |
 | `MAILTRAP_ACCOUNT_ID` | No | auto-discovered | Default account ID |
 | `MAILTRAP_DEFAULT_FROM_EMAIL` | No | — | Default sender email for `send_email` / `send_test_email` |
 | `MAILTRAP_TEST_INBOX_ID` | No | — | Default sandbox inbox ID for `send_test_email` |

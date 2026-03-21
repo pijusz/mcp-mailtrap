@@ -33,7 +33,7 @@ async function importComponentModule(filePath: string): Promise<Record<string, u
   const code = result.outputFiles[0].text;
   const tempFile = join(
     dirname(filePath),
-    `.${basename(filePath)}.mcp-mailtrap-${Date.now()}-${process.pid}.mjs`,
+    `.${basename(filePath)}.mcpj-mailtrap-${Date.now()}-${process.pid}.mjs`,
   );
 
   await writeFile(tempFile, code, "utf8");

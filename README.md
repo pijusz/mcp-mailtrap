@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="mcp-mailtrap" width="280" />
+  <img src="logo.svg" alt="mcpj-mailtrap" width="280" />
 </p>
 
 <p align="center">
@@ -19,12 +19,12 @@ Get an API token from [Mailtrap API Tokens](https://mailtrap.io/api-tokens).
 ### 2. Add to Claude Code
 
 ```bash
-claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- npx mcp-mailtrap
+claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- npx mcpj-mailtrap
 ```
 
 That's it. Restart Claude Code and the tools are available.
 
-> Also works with `bunx mcp-mailtrap@latest` if you have [Bun](https://bun.sh/).
+> Also works with `bunx mcpj-mailtrap@latest` if you have [Bun](https://bun.sh/).
 > Requires Node 18+ when running via `npx`.
 
 ### Claude Desktop / Cursor
@@ -36,7 +36,7 @@ Add to your MCP settings JSON:
   "mcpServers": {
     "mailtrap": {
       "command": "npx",
-      "args": ["-y", "mcp-mailtrap@latest"],
+      "args": ["-y", "mcpj-mailtrap@latest"],
       "env": {
         "MAILTRAP_API_TOKEN": "your_token"
       }
@@ -52,25 +52,25 @@ Download a pre-built binary from [Releases](https://github.com/pijusz/mcp-mailtr
 
 | Platform | File |
 |----------|------|
-| macOS (Apple Silicon) | `mcp-mailtrap-darwin-arm64` |
-| macOS (Intel) | `mcp-mailtrap-darwin-x64` |
-| Linux | `mcp-mailtrap-linux-x64` |
-| Windows | `mcp-mailtrap-windows-x64.exe` |
+| macOS (Apple Silicon) | `mcpj-mailtrap-darwin-arm64` |
+| macOS (Intel) | `mcpj-mailtrap-darwin-x64` |
+| Linux | `mcpj-mailtrap-linux-x64` |
+| Windows | `mcpj-mailtrap-windows-x64.exe` |
 
 **macOS / Linux:**
 
 ```bash
-curl -Lo mcp-mailtrap https://github.com/pijusz/mcp-mailtrap/releases/latest/download/mcp-mailtrap-darwin-arm64
-chmod +x mcp-mailtrap
-sudo mv mcp-mailtrap /usr/local/bin/
-claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- /usr/local/bin/mcp-mailtrap
+curl -Lo mcpj-mailtrap https://github.com/pijusz/mcp-mailtrap/releases/latest/download/mcpj-mailtrap-darwin-arm64
+chmod +x mcpj-mailtrap
+sudo mv mcpj-mailtrap /usr/local/bin/
+claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- /usr/local/bin/mcpj-mailtrap
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/pijusz/mcp-mailtrap/releases/latest/download/mcp-mailtrap-windows-x64.exe" -OutFile "$env:LOCALAPPDATA\mcp-mailtrap.exe"
-claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcp-mailtrap.exe"
+Invoke-WebRequest -Uri "https://github.com/pijusz/mcp-mailtrap/releases/latest/download/mcpj-mailtrap-windows-x64.exe" -OutFile "$env:LOCALAPPDATA\mcpj-mailtrap.exe"
+claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcpj-mailtrap.exe"
 ```
 
 </details>
@@ -173,13 +173,13 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcp-
 **Using a binary**: The server checks for new releases on startup and logs to stderr if outdated:
 
 ```
-[mcp-mailtrap] Update available: v0.2.0 (current: v0.1.0)
+[mcpj-mailtrap] Update available: v0.2.0 (current: v0.1.0)
 ```
 
 Check your installed version:
 
 ```bash
-mcp-mailtrap --version
+mcpj-mailtrap --version
 ```
 
 ## Development

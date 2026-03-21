@@ -1,11 +1,11 @@
 {
-  "name": "mcp-mailtrap",
+  "name": "mcpj-mailtrap",
   "version": "0.1.1",
   "description": "MCP server for the Mailtrap email platform — analytics, sending, contacts, sandbox",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-mailtrap": "dist/index.js"
+    "mcpj-mailtrap": "dist/index.js"
   },
   "files": [
     "dist",
@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "dev": "bun src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile=mcp-mailtrap",
+    "build": "bun build src/index.ts --compile --outfile=mcpj-mailtrap",
     "build:npm": "bun build src/index.ts --target=node --outfile=dist/index.js && node -e \"const f=require('fs');const c=f.readFileSync('dist/index.js','utf8');f.writeFileSync('dist/index.js','#!/usr/bin/env node\\n'+c)\" && chmod +x dist/index.js",
     "prepublishOnly": "bun run build:npm",
     "test": "bun test",

@@ -1,4 +1,4 @@
-const PREFIX = "[mcp-mailtrap]";
+const PREFIX = "[mcpj-mailtrap]";
 
 export const log = {
   info: (...args: unknown[]) => console.error(PREFIX, ...args),

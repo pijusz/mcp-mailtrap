@@ -11,7 +11,7 @@ export function registerContactTools(server: McpServer): void {
     {
       email: z.string().describe("Contact email address"),
       fields: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .optional()
         .describe("Custom field values (key-value pairs)"),
       list_ids: z
@@ -58,7 +58,10 @@ export function registerContactTools(server: McpServer): void {
     {
       identifier: z.string().describe("Contact UUID or email address"),
       email: z.string().optional().describe("New email address"),
-      fields: z.record(z.unknown()).optional().describe("Custom field values to update"),
+      fields: z
+        .record(z.string(), z.unknown())
+        .optional()
+        .describe("Custom field values to update"),
       list_ids_included: z
         .array(z.number())
         .optional()
@@ -117,7 +120,7 @@ export function registerContactTools(server: McpServer): void {
       identifier: z.string().describe("Contact UUID or email address"),
       event_name: z.string().describe("Name of the event to trigger"),
       params: z
-        .record(z.unknown())
+        .record(z.string(), z.unknown())
         .optional()
         .describe("Event parameters (key-value pairs)"),
     },
@@ -308,7 +311,10 @@ export function registerContactTools(server: McpServer): void {
         .array(
           z.object({
             email: z.string().describe("Contact email address"),
-            fields: z.record(z.unknown()).optional().describe("Custom field values"),
+            fields: z
+              .record(z.string(), z.unknown())
+              .optional()
+              .describe("Custom field values"),
             list_ids_included: z
               .array(z.number())
               .optional()

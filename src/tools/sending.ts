@@ -23,6 +23,49 @@ const attachmentSchema = z.object({
   content_id: z.string().optional().describe("Content ID for inline attachments"),
 });
 
+const batchBaseSchema = z.object({
+  from_email: z.string().optional().describe("Shared sender email"),
+  from_name: z.string().optional().describe("Shared sender name"),
+  subject: z.string().optional().describe("Shared subject"),
+  html: z.string().optional().describe("Shared HTML body"),
+  text: z.string().optional().describe("Shared plain-text body"),
+  template_uuid: z.string().optional().describe("Shared template UUID"),
+  template_variables: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Shared template variables"),
+  category: z.string().optional().describe("Shared category"),
+  custom_variables: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Shared custom variables"),
+  headers: z.record(z.string(), z.string()).optional().describe("Shared custom headers"),
+});
+
+const batchRequestSchema = z.object({
+  from_email: z.string().optional().describe("Sender email"),
+  from_name: z.string().optional().describe("Sender name"),
+  to: z.array(recipientSchema).optional().describe("To recipients"),
+  cc: z.array(recipientSchema).optional().describe("CC recipients"),
+  bcc: z.array(recipientSchema).optional().describe("BCC recipients"),
+  subject: z.string().optional().describe("Subject"),
+  html: z.string().optional().describe("HTML body"),
+  text: z.string().optional().describe("Plain-text body"),
+  template_uuid: z.string().optional().describe("Template UUID"),
+  template_variables: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Template variables"),
+  category: z.string().optional().describe("Category"),
+  custom_variables: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe("Custom variables"),
+  headers: z.record(z.string(), z.string()).optional().describe("Custom headers"),
+});
+
+type BatchRequest = z.infer<typeof batchRequestSchema>;
+
 export function registerSendingTools(server: McpServer): void {
   server.tool(
     "send_email",
@@ -48,15 +91,18 @@ export function registerSendingTools(server: McpServer): void {
         .optional()
         .describe("Template UUID to use instead of inline body"),
       template_variables: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Variables to inject into the template"),
       category: z.string().optional().describe("Email category for analytics"),
       custom_variables: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Custom variables attached to the message"),
-      headers: z.record(z.string()).optional().describe("Custom email headers"),
+      headers: z
+        .record(z.string(), z.string())
+        .optional()
+        .describe("Custom email headers"),
       attachments: z
         .array(attachmentSchema)
         .optional()
@@ -113,51 +159,11 @@ export function registerSendingTools(server: McpServer): void {
     "Send up to 500 emails in a single batch request via a transactional or bulk stream.",
     {
       stream: streamSchema,
-      base: z
-        .object({
-          from_email: z.string().optional().describe("Shared sender email"),
-          from_name: z.string().optional().describe("Shared sender name"),
-          subject: z.string().optional().describe("Shared subject"),
-          html: z.string().optional().describe("Shared HTML body"),
-          text: z.string().optional().describe("Shared plain-text body"),
-          template_uuid: z.string().optional().describe("Shared template UUID"),
-          template_variables: z
-            .record(z.string())
-            .optional()
-            .describe("Shared template variables"),
-          category: z.string().optional().describe("Shared category"),
-          custom_variables: z
-            .record(z.string())
-            .optional()
-            .describe("Shared custom variables"),
-          headers: z.record(z.string()).optional().describe("Shared custom headers"),
-        })
+      base: batchBaseSchema
         .optional()
         .describe("Shared properties applied to every email in the batch"),
       requests: z
-        .array(
-          z.object({
-            from_email: z.string().optional().describe("Sender email"),
-            from_name: z.string().optional().describe("Sender name"),
-            to: z.array(recipientSchema).optional().describe("To recipients"),
-            cc: z.array(recipientSchema).optional().describe("CC recipients"),
-            bcc: z.array(recipientSchema).optional().describe("BCC recipients"),
-            subject: z.string().optional().describe("Subject"),
-            html: z.string().optional().describe("HTML body"),
-            text: z.string().optional().describe("Plain-text body"),
-            template_uuid: z.string().optional().describe("Template UUID"),
-            template_variables: z
-              .record(z.string())
-              .optional()
-              .describe("Template variables"),
-            category: z.string().optional().describe("Category"),
-            custom_variables: z
-              .record(z.string())
-              .optional()
-              .describe("Custom variables"),
-            headers: z.record(z.string()).optional().describe("Custom headers"),
-          }),
-        )
+        .array(batchRequestSchema)
         .describe(
           "Array of individual email objects (each needs at least one of to/cc/bcc)",
         ),
@@ -186,7 +192,7 @@ export function registerSendingTools(server: McpServer): void {
         batchBody.base = base;
       }
 
-      batchBody.requests = args.requests.map((req) => {
+      batchBody.requests = args.requests.map((req: BatchRequest) => {
         const item: Record<string, unknown> = {};
         if (req.from_email) {
           item.from = {
@@ -246,7 +252,7 @@ export function registerSendingTools(server: McpServer): void {
         .optional()
         .describe("Template UUID to use instead of inline body"),
       template_variables: z
-        .record(z.string())
+        .record(z.string(), z.string())
         .optional()
         .describe("Variables to inject into the template"),
     },

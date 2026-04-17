@@ -3,9 +3,11 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 export function registerAccountTools(server: McpServer): void {
-  server.tool(
+  readTool(
+    server,
     "list_accounts",
     "List all accounts accessible to the current API token, or get a single account by ID.",
     {
@@ -49,7 +51,8 @@ export function registerAccountTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_billing_usage",
     "Get current billing cycle usage and plan limits for testing and sending.",
     {},
@@ -102,7 +105,8 @@ export function registerAccountTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_account_access",
     "List, remove, or update account access entries and permissions.",
     {
@@ -202,7 +206,8 @@ export function registerAccountTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_api_token",
     "List, get, create, delete, or reset API tokens.",
     {

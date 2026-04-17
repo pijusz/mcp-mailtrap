@@ -3,9 +3,11 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 export function registerDomainTools(server: McpServer): void {
-  server.tool(
+  readTool(
+    server,
     "list_domains",
     "List all sending domains with DNS verification status.",
     {},
@@ -34,7 +36,8 @@ export function registerDomainTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_domain",
     "Get a sending domain's details including DNS records and verification status.",
     {
@@ -51,7 +54,8 @@ export function registerDomainTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_domain",
     "Create or delete a sending domain.",
     {
@@ -123,7 +127,8 @@ export function registerDomainTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "send_domain_setup_instructions",
     "Email DNS setup instructions for a domain to a colleague.",
     {

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 interface EmailLog {
   message_id: string;
@@ -37,7 +38,8 @@ interface ContactList {
 }
 
 export function registerEmailLogTools(server: McpServer): void {
-  server.tool(
+  readTool(
+    server,
     "get_email_logs",
     "List sent email logs with filtering and cursor-based pagination.",
     {
@@ -107,7 +109,8 @@ export function registerEmailLogTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_email_log",
     "Get detailed log for a single message including delivery events.",
     {
@@ -125,7 +128,8 @@ export function registerEmailLogTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_suppressions",
     "List suppressed email addresses.",
     {
@@ -165,7 +169,8 @@ export function registerEmailLogTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "delete_suppression",
     "Remove a suppression to allow sending to the email address again.",
     {
@@ -183,7 +188,8 @@ export function registerEmailLogTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "check_list_hygiene",
     "Cross-references suppressions against contacts to find suppressed emails still in your contact lists. Looks up each suppressed email as a contact and checks list membership. Returns overlaps with specific remediation actions.",
     {

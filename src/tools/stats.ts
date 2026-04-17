@@ -3,6 +3,7 @@ import { z } from "zod";
 import { formatGroupedStats, formatStats } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool } from "../utils/register-tool.ts";
 
 const GROUP_BY_PATHS: Record<string, string> = {
   domain: "domains",
@@ -19,7 +20,8 @@ const GROUP_BY_KEYS: Record<string, string> = {
 };
 
 export function registerStatsTools(server: McpServer): void {
-  server.tool(
+  readTool(
+    server,
     "get_stats",
     "Get sending statistics (delivery, bounce, open, click, spam rates). Use group_by to break down by domain, category, ESP, or date.",
     {

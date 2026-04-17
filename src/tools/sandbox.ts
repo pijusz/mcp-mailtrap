@@ -3,6 +3,7 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request, requestText } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 function redactPassword(obj: Record<string, unknown>): Record<string, unknown> {
   if ("password" in obj) {
@@ -12,7 +13,7 @@ function redactPassword(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 export function registerSandboxTools(server: McpServer): void {
-  server.tool("list_projects", "List all sandbox projects.", {}, async () => {
+  readTool(server, "list_projects", "List all sandbox projects.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
       "GET",
@@ -26,7 +27,8 @@ export function registerSandboxTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  server.tool(
+  readTool(
+    server,
     "get_project",
     "Get details of a single sandbox project.",
     {
@@ -43,7 +45,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_project",
     "Create, update, or delete a sandbox project.",
     {
@@ -91,7 +94,7 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool("list_inboxes", "List all sandbox inboxes.", {}, async () => {
+  readTool(server, "list_inboxes", "List all sandbox inboxes.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
       "GET",
@@ -110,7 +113,8 @@ export function registerSandboxTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  server.tool(
+  readTool(
+    server,
     "get_inbox",
     "Get details of a single sandbox inbox.",
     {
@@ -133,7 +137,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_inbox",
     "Create, update, clean, mark all read, reset credentials, or delete a sandbox inbox.",
     {
@@ -225,7 +230,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_messages",
     "List messages in a sandbox inbox.",
     {
@@ -264,7 +270,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_message",
     "Get a single sandbox message with body content and optional attachments.",
     {
@@ -321,7 +328,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "analyze_message",
     "Analyze a sandbox message: spam report, HTML analysis, and mail headers.",
     {
@@ -356,7 +364,8 @@ export function registerSandboxTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "forward_message",
     "Forward a sandbox message to an email address.",
     {

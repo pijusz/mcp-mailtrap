@@ -3,9 +3,11 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 export function registerContactTools(server: McpServer): void {
-  server.tool(
+  writeTool(
+    server,
     "create_contact",
     "Create a new contact with an email address, optional custom fields, and optional list memberships.",
     {
@@ -35,7 +37,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "get_contact",
     "Get a contact by UUID or email address.",
     {
@@ -52,7 +55,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "update_contact",
     "Update a contact's email, custom fields, list memberships, or unsubscribed status.",
     {
@@ -96,7 +100,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "delete_contact",
     "Delete a contact by UUID or email address.",
     {
@@ -113,7 +118,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "trigger_contact_event",
     "Trigger a custom event for a contact (used for automation workflows).",
     {
@@ -139,7 +145,7 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool("list_contact_lists", "List all contact lists.", {}, async () => {
+  readTool(server, "list_contact_lists", "List all contact lists.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
       "GET",
@@ -153,7 +159,8 @@ export function registerContactTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  server.tool(
+  readTool(
+    server,
     "get_contact_list",
     "Get details of a single contact list.",
     {
@@ -170,7 +177,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "create_contact_list",
     "Create a new contact list.",
     {
@@ -188,7 +196,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "update_contact_list",
     "Rename an existing contact list.",
     {
@@ -207,7 +216,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "delete_contact_list",
     "Delete a contact list.",
     {
@@ -224,7 +234,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "manage_contact_field",
     "List, get, create, update, or delete custom contact fields.",
     {
@@ -303,7 +314,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "import_contacts",
     "Start a contact import or check the status of an existing import.",
     {
@@ -360,7 +372,8 @@ export function registerContactTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "export_contacts",
     "Start a contact export or check the status of an existing export.",
     {

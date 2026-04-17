@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getEnv } from "../config/env.ts";
 import { request } from "../services/mailtrap-api.ts";
+import { writeTool } from "../utils/register-tool.ts";
 
 const recipientSchema = z.object({
   email: z.string().describe("Email address"),
@@ -67,7 +68,8 @@ const batchRequestSchema = z.object({
 type BatchRequest = z.infer<typeof batchRequestSchema>;
 
 export function registerSendingTools(server: McpServer): void {
-  server.tool(
+  writeTool(
+    server,
     "send_email",
     "Send a single email via a transactional or bulk stream. Provide html/text body or a template_uuid.",
     {
@@ -154,7 +156,8 @@ export function registerSendingTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "batch_send",
     "Send up to 500 emails in a single batch request via a transactional or bulk stream.",
     {
@@ -230,7 +233,8 @@ export function registerSendingTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "send_test_email",
     "Send a test email to a sandbox inbox for development/testing.",
     {

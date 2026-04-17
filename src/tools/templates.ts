@@ -7,6 +7,7 @@ import { z } from "zod";
 import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
+import { readTool, writeTool } from "../utils/register-tool.ts";
 
 /** Import a component module, transpiling .tsx/.jsx via esbuild on Node. */
 async function importComponentModule(filePath: string): Promise<Record<string, unknown>> {
@@ -46,7 +47,7 @@ async function importComponentModule(filePath: string): Promise<Record<string, u
 }
 
 export function registerTemplateTools(server: McpServer): void {
-  server.tool("list_templates", "List all email templates.", {}, async () => {
+  readTool(server, "list_templates", "List all email templates.", {}, async () => {
     const accountId = await resolveAccountId();
     const data = await request<Record<string, unknown>[]>(
       "GET",
@@ -63,7 +64,8 @@ export function registerTemplateTools(server: McpServer): void {
     return { content: [{ type: "text" as const, text }] };
   });
 
-  server.tool(
+  readTool(
+    server,
     "get_template",
     "Get a single email template by ID.",
     {
@@ -80,7 +82,8 @@ export function registerTemplateTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "create_template",
     "Create a new email template. body_html is passed to Mailtrap as-is.",
     {
@@ -111,7 +114,8 @@ export function registerTemplateTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "update_template",
     "Update an existing email template.",
     {
@@ -140,7 +144,8 @@ export function registerTemplateTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  writeTool(
+    server,
     "delete_template",
     "Delete an email template.",
     {
@@ -157,7 +162,8 @@ export function registerTemplateTools(server: McpServer): void {
     },
   );
 
-  server.tool(
+  readTool(
+    server,
     "render_react_email",
     "Render a react-email component file (.tsx/.jsx/.js/.mjs) to HTML and plain text. Purely local — does NOT call any Mailtrap API. The file must default-export a React component using @react-email/components.",
     {

@@ -8,25 +8,30 @@ import { readTool, writeTool } from "../utils/register-tool.ts";
 interface EmailLog {
   message_id: string;
   subject: string;
-  to_email: string;
-  from_email: string;
+  to: string;
+  from: string;
   status: string;
   sending_stream: string;
   sent_at: string;
+  category?: string | null;
+  opens_count?: number;
+  clicks_count?: number;
   [key: string]: unknown;
 }
 
 interface EmailLogsResponse {
-  data: EmailLog[];
-  next_page_cursor?: string;
+  messages: EmailLog[];
+  total_count?: number;
+  next_page_cursor?: string | null;
 }
 
 interface Suppression {
   id: string;
   email: string;
-  reason: string;
+  type: string;
   created_at: string;
   sending_stream: string;
+  domain_name?: string;
   [key: string]: unknown;
 }
 
@@ -41,13 +46,16 @@ export function registerEmailLogTools(server: McpServer): void {
   readTool(
     server,
     "get_email_logs",
-    "List sent email logs with filtering and cursor-based pagination.",
+    "List sent email logs (newest first) with filters. Returns message_id, recipient, sender, subject, status, stream, category and sent time. Use get_email_log with a message_id for the full event timeline. Paginate by passing the returned cursor.",
     {
       limit: z
         .number()
+        .int()
+        .min(1)
+        .max(1000)
         .optional()
         .default(50)
-        .describe("Number of results to return (default 50)"),
+        .describe("Max rows to show (default 50)"),
       status: z
         .enum(["delivered", "not_delivered", "enqueued", "opted_out"])
         .optional()
@@ -59,28 +67,54 @@ export function registerEmailLogTools(server: McpServer): void {
       sent_after: z
         .string()
         .optional()
-        .describe("Filter emails sent after this date (ISO 8601)"),
+        .describe(
+          "Only emails sent after this time (ISO 8601, e.g. 2026-01-31T00:00:00Z)",
+        ),
       sent_before: z
         .string()
         .optional()
-        .describe("Filter emails sent before this date (ISO 8601)"),
-      search: z.string().optional().describe("Search by subject, to, or from email"),
+        .describe("Only emails sent before this time (ISO 8601)"),
+      to: z
+        .string()
+        .optional()
+        .describe("Recipient address contains this text (case-insensitive)"),
+      from: z
+        .string()
+        .optional()
+        .describe("Sender address contains this text (case-insensitive)"),
+      subject: z
+        .string()
+        .optional()
+        .describe("Subject contains this text (case-insensitive)"),
+      category: z.string().optional().describe("Exact email category"),
       cursor: z
         .string()
         .optional()
-        .describe("Cursor for pagination (from next_page_cursor)"),
+        .describe("Pagination cursor returned by a previous call (a message_id)"),
     },
     async (args) => {
       const accountId = await resolveAccountId();
-      const query: Record<string, string | number | undefined> = {
-        limit: args.limit,
+      const query: Record<string, string | number | undefined> = {};
+
+      const equal = (field: string, value?: string) => {
+        if (!value) return;
+        query[`filters[${field}][operator]`] = "equal";
+        query[`filters[${field}][value]`] = value;
+      };
+      const contains = (field: string, value?: string) => {
+        if (!value) return;
+        query[`filters[${field}][operator]`] = "ci_contain";
+        query[`filters[${field}][value]`] = value;
       };
 
-      if (args.status) query["filter[status]"] = args.status;
-      if (args.sending_stream) query["filter[sending_stream]"] = args.sending_stream;
-      if (args.sent_after) query["filter[sent_after]"] = args.sent_after;
-      if (args.sent_before) query["filter[sent_before]"] = args.sent_before;
-      if (args.search) query["filter[search]"] = args.search;
+      equal("status", args.status);
+      equal("sending_stream", args.sending_stream);
+      equal("category", args.category);
+      contains("to", args.to);
+      contains("from", args.from);
+      contains("subject", args.subject);
+      if (args.sent_after) query["filters[sent_after]"] = args.sent_after;
+      if (args.sent_before) query["filters[sent_before]"] = args.sent_before;
       if (args.cursor) query.search_after = args.cursor;
 
       const response = await request<EmailLogsResponse>(
@@ -89,20 +123,30 @@ export function registerEmailLogTools(server: McpServer): void {
         { query },
       );
 
-      const rows = response.data.map((log) => ({
+      const messages = response.messages ?? [];
+      // The API returns a fixed page size, so apply `limit` client-side.
+      const page = messages.slice(0, args.limit);
+
+      const rows = page.map((log) => ({
         message_id: log.message_id,
-        to: log.to_email,
-        from: log.from_email,
+        to: log.to,
+        from: log.from,
         subject: log.subject,
         status: log.status,
         stream: log.sending_stream,
+        category: log.category ?? "",
         sent_at: log.sent_at,
       }));
 
-      let text = formatTable(rows, "Email Logs");
+      const total = response.total_count ?? messages.length;
+      let text = formatTable(rows, `Email Logs (showing ${rows.length} of ${total})`);
 
-      if (response.next_page_cursor) {
-        text += `\n\nNext page cursor: ${response.next_page_cursor}`;
+      const nextCursor =
+        page.length < messages.length
+          ? page[page.length - 1]?.message_id
+          : response.next_page_cursor;
+      if (nextCursor) {
+        text += `\n\nMore results available. Next page cursor: ${nextCursor}`;
       }
 
       return { content: [{ type: "text" as const, text }] };
@@ -112,15 +156,15 @@ export function registerEmailLogTools(server: McpServer): void {
   readTool(
     server,
     "get_email_log",
-    "Get detailed log for a single message including delivery events.",
+    "Get the full log for one sent message (from get_email_logs), including its delivery/open/click/bounce event timeline.",
     {
-      message_id: z.string().describe("The message ID to look up"),
+      message_id: z.string().describe("The message_id from get_email_logs"),
     },
     async (args) => {
       const accountId = await resolveAccountId();
       const data = await request<Record<string, unknown>>(
         "GET",
-        `/api/accounts/${accountId}/email_logs/${args.message_id}`,
+        `/api/accounts/${accountId}/email_logs/${encodeURIComponent(args.message_id)}`,
       );
 
       const text = JSON.stringify(data, null, 2);
@@ -131,9 +175,12 @@ export function registerEmailLogTools(server: McpServer): void {
   readTool(
     server,
     "get_suppressions",
-    "List suppressed email addresses.",
+    "List suppressed addresses (hard bounces, spam complaints, unsubscribes, manual imports) that Mailtrap will not send to. Returns the suppression id needed by delete_suppression.",
     {
-      email: z.string().optional().describe("Filter by email address"),
+      email: z
+        .string()
+        .optional()
+        .describe("Only return the suppression for this exact address"),
       start_time: z
         .string()
         .optional()
@@ -147,9 +194,9 @@ export function registerEmailLogTools(server: McpServer): void {
       const accountId = await resolveAccountId();
       const query: Record<string, string | undefined> = {};
 
-      if (args.email) query["filter[email]"] = args.email;
-      if (args.start_time) query["filter[start_time]"] = args.start_time;
-      if (args.end_time) query["filter[end_time]"] = args.end_time;
+      if (args.email) query.email = args.email;
+      if (args.start_time) query.start_time = args.start_time;
+      if (args.end_time) query.end_time = args.end_time;
 
       const data = await request<Suppression[]>(
         "GET",
@@ -158,13 +205,15 @@ export function registerEmailLogTools(server: McpServer): void {
       );
 
       const rows = data.map((s) => ({
+        id: s.id,
         email: s.email,
-        reason: s.reason,
+        type: s.type,
+        stream: s.sending_stream,
+        domain: s.domain_name ?? "",
         created_at: s.created_at,
-        sending_stream: s.sending_stream,
       }));
 
-      const text = formatTable(rows, "Suppressions");
+      const text = formatTable(rows, `Suppressions (${rows.length})`);
       return { content: [{ type: "text" as const, text }] };
     },
   );
@@ -172,15 +221,15 @@ export function registerEmailLogTools(server: McpServer): void {
   writeTool(
     server,
     "delete_suppression",
-    "Remove a suppression to allow sending to the email address again.",
+    "Remove a suppression so Mailtrap will send to that address again. Get the id from get_suppressions. Only do this if the address is known to be valid and consenting.",
     {
-      suppression_id: z.string().describe("The suppression ID to delete"),
+      suppression_id: z.string().describe("Suppression id (UUID) from get_suppressions"),
     },
     async (args) => {
       const accountId = await resolveAccountId();
       await request(
         "DELETE",
-        `/api/accounts/${accountId}/suppressions/${args.suppression_id}`,
+        `/api/accounts/${accountId}/suppressions/${encodeURIComponent(args.suppression_id)}`,
       );
 
       const text = `Suppression ${args.suppression_id} deleted successfully.`;
@@ -247,10 +296,12 @@ export function registerEmailLogTools(server: McpServer): void {
 
       const overlaps: Array<{
         email: string;
-        reason: string;
+        type: string;
         created_at: string;
         lists: Array<{ id: number; name: string }>;
       }> = [];
+
+      let failedLookups = 0;
 
       // Batch lookups (max 10 concurrent to respect rate limits)
       const batchSize = 10;
@@ -268,6 +319,13 @@ export function registerEmailLogTools(server: McpServer): void {
         for (let j = 0; j < results.length; j++) {
           const result = results[j];
           const suppression = batch[j];
+          // 404 just means the suppressed address is not a contact — expected.
+          if (
+            result.status === "rejected" &&
+            !String(result.reason?.message ?? result.reason).includes("error 404")
+          ) {
+            failedLookups++;
+          }
           if (result.status === "fulfilled" && result.value?.data?.list_ids) {
             const matchingLists = result.value.data.list_ids
               .filter((id) => targetListIds.has(id))
@@ -279,7 +337,7 @@ export function registerEmailLogTools(server: McpServer): void {
             if (matchingLists.length > 0) {
               overlaps.push({
                 email: suppression.email,
-                reason: suppression.reason,
+                type: suppression.type,
                 created_at: suppression.created_at,
                 lists: matchingLists,
               });
@@ -294,6 +352,11 @@ export function registerEmailLogTools(server: McpServer): void {
       lines.push("");
       lines.push(`Suppressions checked: ${suppressions.length}`);
       lines.push(`Overlaps found: ${overlaps.length}`);
+      if (failedLookups > 0) {
+        lines.push(
+          `Warning: ${failedLookups} contact lookups failed (likely rate limiting) — the report may be incomplete. Re-run later or pass list_id.`,
+        );
+      }
       lines.push("");
 
       if (overlaps.length === 0) {
@@ -303,7 +366,7 @@ export function registerEmailLogTools(server: McpServer): void {
         lines.push("─".repeat(50));
         for (const overlap of overlaps) {
           lines.push(
-            `  ${overlap.email} (${overlap.reason}, suppressed ${overlap.created_at})`,
+            `  ${overlap.email} (${overlap.type}, suppressed ${overlap.created_at})`,
           );
           for (const list of overlap.lists) {
             lines.push(`    → in list "${list.name}" (ID: ${list.id})`);
@@ -313,21 +376,17 @@ export function registerEmailLogTools(server: McpServer): void {
 
         lines.push("Suggested Actions:");
         for (const overlap of overlaps) {
-          if (overlap.reason === "complaint" || overlap.reason === "unsubscribe") {
-            lines.push(
-              `  • update_contact(identifier: "${overlap.email}", list_ids_excluded: [${overlap.lists.map((l) => l.id).join(", ")}])`,
-            );
-            lines.push(
-              `    Reason: ${overlap.reason} — remove from lists, keep suppression`,
-            );
-          } else {
-            lines.push(
-              `  • update_contact(identifier: "${overlap.email}", list_ids_excluded: [${overlap.lists.map((l) => l.id).join(", ")}])`,
-            );
-            lines.push(
-              `    Reason: ${overlap.reason} — remove from lists. If email is valid, also delete_suppression.`,
-            );
-          }
+          const listIds = overlap.lists.map((l) => l.id).join(", ");
+          lines.push(
+            `  • update_contact(identifier: "${overlap.email}", list_ids_excluded: [${listIds}])`,
+          );
+          // Complaints and unsubscribes are consent signals: never lift those suppressions.
+          const consentSignal = /complaint|spam|unsubscri/i.test(overlap.type);
+          lines.push(
+            consentSignal
+              ? `    Reason: ${overlap.type} — remove from lists, keep suppression`
+              : `    Reason: ${overlap.type} — remove from lists. If the address is valid again, also delete_suppression.`,
+          );
         }
       }
 

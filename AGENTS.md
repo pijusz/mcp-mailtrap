@@ -66,10 +66,10 @@ Set `MAILTRAP_API_TOKEN` env var. Optionally set `MAILTRAP_SENDING_TOKEN` for tr
 - `get_stats` — Aggregate or grouped stats. Use `group_by` for domain/category/esp/date breakdown.
 
 ### Email Logs (5 tools)
-- `get_email_logs` — List sent emails with filters (status, stream, date). Cursor-based pagination with `limit` param.
+- `get_email_logs` — List sent emails with filters (status, stream, sent_after/sent_before, to/from/subject contains, category). Pass the returned cursor for the next page; `limit` caps rows shown.
 - `get_email_log` — Single message detail with events timeline.
-- `get_suppressions` — List bounced/spam/unsubscribed emails.
-- `delete_suppression` — Re-enable sending to a suppressed address.
+- `get_suppressions` — List bounced/spam/unsubscribed emails, including the suppression `id`.
+- `delete_suppression` — Re-enable sending to a suppressed address (needs `id` from `get_suppressions`).
 - `check_list_hygiene` — Look up suppressed emails as contacts and report which lists they still belong to.
 
 ### Sending (3 tools)

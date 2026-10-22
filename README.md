@@ -111,7 +111,7 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcpj
 
 </details>
 
-## Tools (48)
+## Tools (46)
 
 ### Analytics
 | Tool | Description |
@@ -121,9 +121,9 @@ claude mcp add mailtrap -e MAILTRAP_API_TOKEN=your_token -- "%LOCALAPPDATA%\mcpj
 ### Email Logs
 | Tool | Description |
 |------|-------------|
-| `get_email_logs` | List sent emails with filtering by status, stream, date. Cursor-based pagination |
+| `get_email_logs` | List sent emails filtered by status, stream, date range, recipient, sender, subject, or category. Cursor-based pagination |
 | `get_email_log` | Single message detail with delivery events timeline |
-| `get_suppressions` | List suppressed emails (bounces, spam complaints, unsubscribes) |
+| `get_suppressions` | List suppressed emails (bounces, spam complaints, unsubscribes) with the IDs `delete_suppression` needs |
 | `delete_suppression` | Re-enable sending to a suppressed address |
 | `check_list_hygiene` | Find suppressed emails that still exist in contact lists and suggest exact cleanup actions |
 
@@ -227,6 +227,7 @@ git clone https://github.com/pijusz/mcp-mailtrap.git
 cd mcp-mailtrap
 bun install
 bun test           # tests
+bun run typecheck  # tsc
 bun run build      # standalone binary
 bun run inspect    # MCP Inspector
 bun run check      # biome format + lint

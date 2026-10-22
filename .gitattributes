@@ -1,2 +1,2 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalize to LF everywhere (biome checks fail on Windows CRLF checkouts otherwise)
+* text=auto eol=lf

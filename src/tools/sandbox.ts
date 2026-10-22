@@ -4,6 +4,7 @@ import { formatTable } from "../services/format.ts";
 import { request, requestText } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
 import { readTool, writeTool } from "../utils/register-tool.ts";
+import { requireArgs } from "../utils/tool-result.ts";
 
 function redactPassword(obj: Record<string, unknown>): Record<string, unknown> {
   if ("password" in obj) {
@@ -63,6 +64,16 @@ export function registerSandboxTools(server: McpServer): void {
         .describe("Project name (required for create, optional for update)"),
     },
     async (args) => {
+      const invalid = requireArgs(
+        args,
+        args.action === "create"
+          ? ["name"]
+          : args.action === "update"
+            ? ["project_id", "name"]
+            : ["project_id"],
+        args.action,
+      );
+      if (invalid) return invalid;
       const accountId = await resolveAccountId();
 
       if (args.action === "create") {
@@ -169,6 +180,12 @@ export function registerSandboxTools(server: McpServer): void {
         .describe("Custom email username (optional, for update only)"),
     },
     async (args) => {
+      const invalid = requireArgs(
+        args,
+        args.action === "create" ? ["project_id", "name"] : ["inbox_id"],
+        args.action,
+      );
+      if (invalid) return invalid;
       const accountId = await resolveAccountId();
 
       if (args.action === "create") {

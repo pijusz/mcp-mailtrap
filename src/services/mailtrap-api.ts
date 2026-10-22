@@ -59,6 +59,21 @@ function buildQueryString(
   return str ? `?${str}` : "";
 }
 
+/** Actionable next step for common auth/permission failures. */
+export function errorHint(status: number, url: string): string {
+  const isSend = /\/api\/(send|batch)/.test(url) && !url.includes("sandbox.api");
+  const tokenVar = isSend
+    ? "MAILTRAP_SENDING_TOKEN (or MAILTRAP_API_TOKEN)"
+    : "MAILTRAP_API_TOKEN";
+  if (status === 401) {
+    return ` (check that ${tokenVar} is a valid, unrevoked token)`;
+  }
+  if (status === 403) {
+    return ` (the token in ${tokenVar} lacks permission for this resource or account; check its access level in Mailtrap → Settings → API Tokens)`;
+  }
+  return "";
+}
+
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
@@ -99,7 +114,9 @@ export async function fetchWithRetry(
         message = body;
       }
 
-      throw new Error(`Mailtrap API error ${response.status}: ${message}`);
+      throw new Error(
+        `Mailtrap API error ${response.status}: ${message}${errorHint(response.status, url)}`,
+      );
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
         if (attempt < retries) {

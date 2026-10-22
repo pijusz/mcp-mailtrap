@@ -4,6 +4,7 @@ import { formatTable } from "../services/format.ts";
 import { request } from "../services/mailtrap-api.ts";
 import { resolveAccountId } from "../utils/account-id.ts";
 import { readTool, writeTool } from "../utils/register-tool.ts";
+import { errorResult, requireArgs } from "../utils/tool-result.ts";
 
 export function registerContactTools(server: McpServer): void {
   writeTool(
@@ -48,7 +49,7 @@ export function registerContactTools(server: McpServer): void {
       const accountId = await resolveAccountId();
       const data = await request<Record<string, unknown>>(
         "GET",
-        `/api/accounts/${accountId}/contacts/${args.identifier}`,
+        `/api/accounts/${accountId}/contacts/${encodeURIComponent(args.identifier)}`,
       );
       const text = JSON.stringify(data, null, 2);
       return { content: [{ type: "text" as const, text }] };
@@ -92,7 +93,7 @@ export function registerContactTools(server: McpServer): void {
 
       const data = await request<Record<string, unknown>>(
         "PATCH",
-        `/api/accounts/${accountId}/contacts/${args.identifier}`,
+        `/api/accounts/${accountId}/contacts/${encodeURIComponent(args.identifier)}`,
         { body: { contact } },
       );
       const text = JSON.stringify(data, null, 2);
@@ -111,7 +112,7 @@ export function registerContactTools(server: McpServer): void {
       const accountId = await resolveAccountId();
       await request<undefined>(
         "DELETE",
-        `/api/accounts/${accountId}/contacts/${args.identifier}`,
+        `/api/accounts/${accountId}/contacts/${encodeURIComponent(args.identifier)}`,
       );
       const text = `Contact ${args.identifier} deleted successfully.`;
       return { content: [{ type: "text" as const, text }] };
@@ -137,7 +138,7 @@ export function registerContactTools(server: McpServer): void {
 
       const data = await request<Record<string, unknown>>(
         "POST",
-        `/api/accounts/${accountId}/contacts/${args.identifier}/events`,
+        `/api/accounts/${accountId}/contacts/${encodeURIComponent(args.identifier)}/events`,
         { body },
       );
       const text = JSON.stringify(data, null, 2);
@@ -263,6 +264,16 @@ export function registerContactTools(server: McpServer): void {
       const accountId = await resolveAccountId();
       const basePath = `/api/accounts/${accountId}/contacts/fields`;
 
+      const required: Record<typeof args.action, string[]> = {
+        list: [],
+        get: ["field_id"],
+        create: ["name", "data_type"],
+        update: ["field_id"],
+        delete: ["field_id"],
+      };
+      const invalid = requireArgs(args, required[args.action], args.action);
+      if (invalid) return invalid;
+
       switch (args.action) {
         case "list": {
           const data = await request<Record<string, unknown>[]>("GET", basePath);
@@ -366,9 +377,9 @@ export function registerContactTools(server: McpServer): void {
         return { content: [{ type: "text" as const, text }] };
       }
 
-      const text =
-        "Please provide either 'contacts' to start an import or 'import_id' to check status.";
-      return { content: [{ type: "text" as const, text }] };
+      return errorResult(
+        "provide either 'contacts' to start an import or 'import_id' to check its status.",
+      );
     },
   );
 

@@ -8,7 +8,7 @@ MCP server for the Mailtrap email platform. Analytics-first with full CRUD.
 - Entry: `src/index.ts`
 - Build: `bun run build` → binary; `bun run build:npm` → `dist/index.js`
 - Test: `bun test`
-- Lint: `biome check src/`
+- Lint: `bun run check` (biome) · Types: `bun run typecheck`
 
 ## Architecture
 
@@ -30,9 +30,9 @@ MCP server for the Mailtrap email platform. Analytics-first with full CRUD.
 ## Adding New Tools
 
 1. Add tool in appropriate file under `src/tools/`
-2. Use `server.tool(name, description, zodSchema, handler)`
+2. Use `readTool(server, name, description, zodShape, handler)` or `writeTool(...)` from `src/utils/register-tool.ts` (wraps `server.registerTool` with MCP annotations)
 3. Use `request<T>()` from mailtrap-api service
 4. Use `resolveAccountId()` for account-scoped endpoints
 5. Format output with `formatTable()` or `JSON.stringify(data, null, 2)`
-6. Return `{ content: [{ type: "text" as const, text }] }`
+6. Return `{ content: [{ type: "text" as const, text }] }`; for bad input use `errorResult()` / `requireArgs()` from `src/utils/tool-result.ts`
 7. Register in `src/tools/index.ts`
